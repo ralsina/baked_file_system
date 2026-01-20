@@ -1,5 +1,6 @@
 require "base64"
 require "compress/gzip"
+require "file_utils"
 require "./string_encoder"
 
 module BakedFileSystem
@@ -18,11 +19,9 @@ module BakedFileSystem
 
       root_path_length = root_path.size
 
-      result = [] of String
-
       files = Dir.glob(Path[root_path].to_posix.join("**", "*"))
-                 # Reject directories
-                 .reject { |path| File.directory?(path) }
+        # Reject directories
+        .reject { |path| File.directory?(path) }
 
       files.each do |path|
         io << "bake_file BakedFileSystem::BakedFile.new(\n"
@@ -53,10 +52,6 @@ module BakedFileSystem
       end
     end
   end
-end
-
-{% if flag?(:objcopy) %}
-  require "file_utils"
 
   module LoaderObjcopy
     class Error < Exception
@@ -238,4 +233,4 @@ end
       end
     end
   end
-{% end %}
+end
