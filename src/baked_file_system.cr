@@ -6,7 +6,7 @@ require "./baked_file_system/*"
 # binary and make them accessible at runtime using their path.
 #
 # ## Usage
-# ```crystal
+# ```
 # # Using BakedFileSystem.load
 # class MyFileSystem
 #   extend BakedFileSystem
@@ -29,7 +29,7 @@ module BakedFileSystem
   #
   # # Usage
   #
-  # ```crystal
+  # ```
   # file = MyFileSystem.get("hello-world.txt")
   # file.path        # => "hello-world.txt"
   # file.size        # => 12
@@ -46,10 +46,29 @@ module BakedFileSystem
     # Returns whether this file is compressed. If not, it is decompressed on read.
     getter? compressed : Bool
 
+    # Constructor for embedding data as a Bytes slice (original method)
     def initialize(@path, @size, @compressed, @slice : Bytes)
       @path = "/" + @path unless @path.starts_with? '/'
       @memory_io = IO::Memory.new(@slice)
       @wrapped_io = compressed? ? @memory_io : Compress::Gzip::Reader.new(@memory_io)
+    end
+
+    # Constructor for reading from C symbol pointers (objcopy method, used with -Dobjcopy)
+    def initialize(@path : String, @size : Int32, @compressed : Bool, start_ptr : UInt8*, end_ptr : UInt8*)
+      @path = "/" + @path unless @path.starts_with? '/'
+
+      # Calculate the size of the compressed data from the pointers
+      start_addr = start_ptr.address
+      end_addr = end_ptr.address
+      compressed_size = (end_addr >= start_addr) ? (end_addr - start_addr).to_i32 : 0
+
+      # Create IO::Memory from the C pointer data
+      bytes = Bytes.new(start_ptr, compressed_size)
+      @memory_io = IO::Memory.new(bytes)
+
+      # Set up wrapped IO based on compression
+      @wrapped_io = compressed? ? @memory_io : Compress::Gzip::Reader.new(@memory_io)
+      @slice = Bytes.new(0)
     end
 
     def read(slice : Bytes)
@@ -139,14 +158,14 @@ module BakedFileSystem
     path = path.strip
     path = "/" + path unless path.starts_with?("/")
 
-    file = @@files.find do |file|
+    found_file = @@files.find do |file|
       file.path == path
     end
 
-    return nil unless file
+    return nil unless found_file
 
-    file.rewind
-    file
+    found_file.rewind
+    found_file
   end
 
   # Returns all virtual files in this file system.
@@ -175,6 +194,9 @@ module BakedFileSystem
   # Bakes all files in *path* into this baked file system.
   # If *path* is relative, it will be based on *dir* which defaults to `__DIR__`.
   # It will raise if there are no files found in *path* unless *allow_empty* is set to `true`.
+  #
+  # When the `-Dobjcopy` compiler flag is set, uses objcopy for faster compilation.
+  # Otherwise uses string literals (original implementation).
   macro bake_folder(path, dir = __DIR__, allow_empty = false)
     {% raise "BakedFileSystem.load expects `path` to be a StringLiteral." unless path.is_a?(StringLiteral) %}
 
