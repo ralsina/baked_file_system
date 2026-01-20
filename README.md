@@ -55,6 +55,33 @@ end
 FileStorage.get? "missing/file" # => nil
 ```
 
+## Faster Compilation with objcopy
+
+By default, files are embedded as Crystal string literals. For projects with many or large baked files, this can significantly increase compile time.
+
+As an alternative, you can use the `-Dobjcopy` compiler flag to embed files using `objcopy`, which converts binary files to C object files that are linked into your binary. This can provide substantial compile time improvements (30%+ faster in some cases).
+
+```crystal
+# Build with objcopy for faster compilation
+crystal build --release -Dobjcopy src/my_app.cr
+```
+
+Or run specs with objcopy:
+
+```crystal
+crystal spec -Dobjcopy
+```
+
+**Requirements:** The `-Dobjcopy` mode requires `objcopy` and `ar` utilities to be available on your system. These are typically installed with `binutils` (Linux) or `Xcode Command Line Tools` (macOS).
+
+**How it works:** Instead of generating large Crystal string literals, the objcopy mode:
+1. Compresses files with gzip
+2. Uses `objcopy` to convert each file to an object file with C symbols
+3. Combines object files into a static library using `ar`
+4. Links the library into your binary with C bindings
+
+The API and behavior remain identical - just faster compilation!
+
 ## Development
 
 TODO: Write development instructions here
