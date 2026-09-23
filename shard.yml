@@ -1,5 +1,5 @@
 name: baked_file_system
-version: 0.10.0
+version: 0.11.0
 crystal: ">= 1.13.0"
 
 authors:
