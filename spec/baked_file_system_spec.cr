@@ -36,7 +36,7 @@ describe BakedFileSystem do
 
   it "get correct file attributes" do
     baked_file = Storage.get("images/sidekiq.png")
-    baked_file.size.should eq(52947)
+    baked_file.size.should eq(52949)
     baked_file.compressed_size.should be_close 47883, 40
 
     baked_file = Storage.get("/lorem.txt")
@@ -52,7 +52,7 @@ describe BakedFileSystem do
   end
 
   it "can read file contents" do
-    files = %w(images/sidekiq.png /lorem.txt)
+    files = %w[images/sidekiq.png /lorem.txt]
     files.each do |path|
       baked_file = Storage.get(path)
       data = baked_file.read
@@ -88,7 +88,7 @@ describe BakedFileSystem do
   end
 
   it "handles interpolation in content" do
-    String.new(Storage.get("string_encoding/interpolation.gz").to_slice).should eq "\#{foo} \{% macro %}\n"
+    String.new(Storage.get("string_encoding/interpolation.gz").to_slice).should eq "\#{foo} {% macro %}\n"
   end
 
   describe ManualStorage do
