@@ -8,7 +8,7 @@ class BakedFileSystem::StringEncoder < IO
   def initialize(@io : IO)
   end
 
-  def self.open(io : IO)
+  def self.open(io : IO, &)
     encoder = new(io)
     yield encoder ensure encoder.close
   end
@@ -26,8 +26,8 @@ class BakedFileSystem::StringEncoder < IO
         @io.write_byte byte
       when 32_u8..127_u8
         @io.write_byte byte
-      when  8_u8 then @io << "\\b"
-      when  9_u8 then @io << "\\t"
+      when 8_u8  then @io << "\\b"
+      when 9_u8  then @io << "\\t"
       when 10_u8 then @io << "\\n"
       when 11_u8 then @io << "\\v"
       when 12_u8 then @io << "\\f"

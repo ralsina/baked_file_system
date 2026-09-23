@@ -6,7 +6,7 @@ require "./baked_file_system/*"
 # binary and make them accessible at runtime using their path.
 #
 # ## Usage
-# ```crystal
+# ```
 # # Using BakedFileSystem.load
 # class MyFileSystem
 #   extend BakedFileSystem
@@ -29,7 +29,7 @@ module BakedFileSystem
   #
   # # Usage
   #
-  # ```crystal
+  # ```
   # file = MyFileSystem.get("hello-world.txt")
   # file.path        # => "hello-world.txt"
   # file.size        # => 12
@@ -143,7 +143,7 @@ module BakedFileSystem
       file.path == path
     end
 
-    return nil unless file
+    return unless file
 
     file.rewind
     file

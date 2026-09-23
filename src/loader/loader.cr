@@ -12,17 +12,15 @@ module BakedFileSystem
         raise Error.new "path does not exist: #{root_path}"
       elsif !File.directory?(root_path)
         raise Error.new "path is not a directory: #{root_path}"
-      elsif !File.readable?(root_path)
+      elsif !File::Info.readable?(root_path)
         raise Error.new "path is not readable: #{root_path}"
       end
 
       root_path_length = root_path.size
 
-      result = [] of String
-
       files = Dir.glob(Path[root_path].to_posix.join("**", "*"))
-                 # Reject directories
-                 .reject { |path| File.directory?(path) }
+        # Reject directories
+        .reject { |path| File.directory?(path) }
 
       files.each do |path|
         io << "bake_file BakedFileSystem::BakedFile.new(\n"
