@@ -1,3 +1,3 @@
 module BakedFileSystem
-  VERSION = "0.9.0"
+  VERSION = {{ `shards version #{__DIR__}/../..`.chomp.stringify }}
 end
