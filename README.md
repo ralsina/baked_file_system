@@ -2,6 +2,32 @@
 
 Include (bake them) static files into a binary at compile time and access them anytime you need.
 
+## About this fork
+
+This is a maintained fork of [schovi/baked_file_system](https://github.com/schovi/baked_file_system).
+
+It exists because of a disagreement about hidden ("dot") paths: upstream rejects
+any path with a hidden component, which silently drops **every** file when the
+source folder itself lives under a hidden directory — for example
+`src/.static/` or `~/.config/myapp/assets`.
+
+Behavior in this fork:
+
+- Baking from a source folder located under a hidden directory works.
+- Dotfiles and dot-directory contents **inside** the baked folder are still
+  skipped (`.htaccess`, `.well-known/...`), because `Dir.glob` does not match
+  hidden entries by default. This matches upstream behavior.
+
+To use this fork instead of upstream, add this to your application's `shard.yml`:
+
+```yaml
+dependencies:
+  baked_file_system:
+    github: ralsina/baked_file_system
+```
+
+Releases are tagged on this fork (starting at `v0.11.0`).
+
 ## Installation
 
 
