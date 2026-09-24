@@ -60,6 +60,14 @@ describe BakedFileSystem do
     end
   end
 
+  it "can read the same file twice" do
+    baked_file = Storage.get("lorem.txt")
+    expected = File.read(File.expand_path(File.join(__DIR__, "storage", "lorem.txt")))
+    baked_file.gets_to_end.should eq(expected)
+    baked_file.rewind
+    baked_file.gets_to_end.should eq(expected)
+  end
+
   it "get correct content of file" do
     path = "images/sidekiq.png"
     baked_file = Storage.get(path)

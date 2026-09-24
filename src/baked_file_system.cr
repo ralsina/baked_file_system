@@ -36,6 +36,10 @@ module BakedFileSystem
   # file.gets_to_end # => "Hello World\n"
   # file.compressed? # => false
   # ```
+  #
+  # NOTE: Reading from the same `BakedFile` concurrently from multiple fibers
+  # or threads is not supported: reads share the decompression state, and
+  # `get`/`get?` reset it via `#rewind`.
   class BakedFile < IO
     # Returns the path in the virtual file system.
     getter path : String
@@ -46,14 +50,25 @@ module BakedFileSystem
     # Returns whether this file is compressed. If not, it is decompressed on read.
     getter? compressed : Bool
 
+    # Created lazily on first read so that baking many files does not
+    # allocate a zlib stream per file at program start.
+    @memory_io : IO::Memory?
+
+    @wrapped_io : IO?
+
     def initialize(@path, @size, @compressed, @slice : Bytes)
       @path = "/" + @path unless @path.starts_with? '/'
-      @memory_io = IO::Memory.new(@slice)
-      @wrapped_io = compressed? ? @memory_io : Compress::Gzip::Reader.new(@memory_io)
+    end
+
+    private def wrapped_io : IO
+      @wrapped_io ||= begin
+        memory_io = (@memory_io ||= IO::Memory.new(@slice))
+        compressed? ? memory_io : Compress::Gzip::Reader.new(memory_io)
+      end
     end
 
     def read(slice : Bytes)
-      @wrapped_io.read(slice)
+      wrapped_io.read(slice)
     end
 
     # Returns the compressed size of this virtual file.
@@ -68,8 +83,8 @@ module BakedFileSystem
     end
 
     def rewind
-      @memory_io.rewind
-      @wrapped_io = compressed? ? @memory_io : Compress::Gzip::Reader.new(@memory_io)
+      @memory_io.try &.rewind
+      @wrapped_io = nil
     end
 
     # Returns a `Bytes` holding the (compressed) content of this virtual file.
