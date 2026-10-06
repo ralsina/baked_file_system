@@ -37,9 +37,10 @@ module BakedFileSystem
   # file.compressed? # => false
   # ```
   #
-  # NOTE: Reading from the same `BakedFile` concurrently from multiple fibers
-  # or threads is not supported: reads share the decompression state, and
-  # `get`/`get?` reset it via `#rewind`.
+  # NOTE: Each `get`/`get?` call returns a new `BakedFile` with its own
+  # read position and decompression state, so separate calls can read
+  # the same path concurrently. A single `BakedFile` must not be read
+  # from several fibers or threads at once.
   class BakedFile < IO
     # Returns the path in the virtual file system.
     getter path : String
@@ -150,6 +151,11 @@ module BakedFileSystem
   end
 
   # Returns a `BakedFile` at *path* or `nil` if the virtual file does not exist.
+  #
+  # The result is a new `BakedFile` over the baked bytes, read from the
+  # start. It is not shared with other callers, so reading it can't
+  # disturb (or be disturbed by) another fiber or thread reading the
+  # same path.
   def get?(path : String) : BakedFile?
     path = path.strip
     path = "/" + path unless path.starts_with?("/")
@@ -160,11 +166,11 @@ module BakedFileSystem
 
     return unless file
 
-    file.rewind
-    file
+    BakedFile.new(file.path, file.size, file.compressed?, file.to_slice)
   end
 
-  # Returns all virtual files in this file system.
+  # Returns all virtual files in this file system. These are the
+  # shared instances: use `get` for a file to read.
   def files : Array(BakedFileSystem::BakedFile)
     @@files
   end
