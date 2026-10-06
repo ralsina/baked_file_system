@@ -68,6 +68,31 @@ describe BakedFileSystem do
     baked_file.gets_to_end.should eq(expected)
   end
 
+  it "returns independent files from separate get calls" do
+    expected = File.read(File.expand_path(File.join(__DIR__, "storage", "lorem.txt")))
+    first = Storage.get("lorem.txt")
+    head = Bytes.new(100)
+    first.read_fully(head)
+
+    # A second get of the same path must not rewind or share the
+    # first one's read state
+    Storage.get("lorem.txt").gets_to_end.should eq(expected)
+
+    (String.new(head) + first.gets_to_end).should eq(expected)
+  end
+
+  it "reads the same path from several threads at once" do
+    expected = File.read(File.expand_path(File.join(__DIR__, "storage", "images", "sidekiq.png")))
+    context = Fiber::ExecutionContext::Parallel.new("bfs-spec", 4)
+    results = Channel(Bool).new(64)
+    64.times do
+      context.spawn do
+        results.send(Storage.get("images/sidekiq.png").gets_to_end == expected)
+      end
+    end
+    64.times { results.receive.should be_true }
+  end
+
   it "get correct content of file" do
     path = "images/sidekiq.png"
     baked_file = Storage.get(path)
